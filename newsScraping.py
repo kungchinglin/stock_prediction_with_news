@@ -1,4 +1,5 @@
 from urllib.request import urlopen, Request
+from urllib.parse import urlparse
 import sqlite3
 import requests
 from bs4 import BeautifulSoup
@@ -32,6 +33,8 @@ def storeTitleAndURL(newsTables, ticker):
         for i,tableRow in enumerate(df_tr):
             title = tableRow.a.text
             href = tableRow.a['href']
+            domainName = urlparse(href).netloc
+
             newsTime = tableRow.td.text.split()
             
             if len(newsTime) == 1:
@@ -40,7 +43,7 @@ def storeTitleAndURL(newsTables, ticker):
                 date, hmsTime = newsTime
             
 
-            cur.execute('''INSERT OR IGNORE INTO NewsURL (Tick, Date, Time, Title, Url) VALUES (?,?,?,?,?) ''',(tick, date, hmsTime, title, href))
+            cur.execute('''INSERT OR IGNORE INTO NewsURL (Tick, Date, Time, Title, Url, Domain) VALUES (?,?,?,?,?,?) ''',(tick, date, hmsTime, title, href,domainName))
         
         conn.commit()
         print("Finished gathering data for {}".format(tick))
@@ -55,6 +58,7 @@ cur.execute('''CREATE TABLE IF NOT EXISTS NewsURL
     Time TEXT,
     Title TEXT,
     Url TEXT,
+    Domain TEXT,
     PRIMARY KEY (Tick, Date, Title))''')
 
 conn.commit()
