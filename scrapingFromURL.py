@@ -3,37 +3,22 @@ from bs4 import BeautifulSoup
 import requests
 
 
-conn = sqlite3.connect('newsStorage.sqlite')
-cur = conn.cursor()
-
-cur.execute('''SELECT DISTINCT Domain from NewsURL
-            ''')
 
 
-domains = cur.fetchall()
+knownDomains = {}
+knownDomains['www.investors.com'] = (('div', "single-post-content post-content drop-cap"), 'p', "YOU MAY ALSO LIKE")
+knownDomains['finance.yahoo.com'] = (('div', "caas-body-wrapper"), 'p', "Subscribe now")
+knownDomains['www.barrons.com'] = (('id', "js-article__body"), 'p', "Write to")
+knownDomains['www.investopedia.com'] = (('id', "article-body_1-0"), 'p', "abcdefghijklmn")
+knownDomains['www.thestreet.com'] = ([], 'p', "Learn more now.")
+knownDomains['www.fool.com'] = (('span', "article-content"), 'p', "Learn more now.")
+knownDomains['www.ft.com'] = ([], "", "")
+knownDomains['www.marketwatch.com'] = (('id', "js-article__body"), 'p', "abcdefghijklmn")
+knownDomains['in.finance.yahoo.com'] = knownDomains['finance.yahoo.com']
+knownDomains['www.millionacres.com'] = (('div', "block-paragraph"), 'p', "abcdefghijklmn")
+knownDomains['qz.com'] = (('id', "article-content"), 'p', "abcdefghijklmn")
+knownDomains['realmoney.thestreet.com'] = (('id', "article__body article-author-rail__body"), 'div', "abcdefghijklmn")
 
-print(domains)
-
-cur.execute('''SELECT * FROM NewsURL
-                WHERE Domain = ?
-                LIMIT 5''', domains[6])
-
-
-rows = cur.fetchall()
-
-
-
-url = rows[2][4]
-
-print(url)
-
-
-StopWords = {}
-StopWords['yahoo'] = "Subscribe now"
-StopWords['investor'] = "YOU MAY ALSO LIKE"
-StopWords['barrons'] = "Write to"
-StopWords['investopedia'] = "abcdefghijklmn"
-StopWords['thestreet'] = "Learn more now."
 
 
 def storeParagraphsAsList(paragraphs, stopWord):
@@ -46,86 +31,53 @@ def storeParagraphsAsList(paragraphs, stopWord):
     
     return Texts
 
-def getTextFromURL_ft(url):
-    print("Locked behind paywall!")
-    return []
-
-def getTextFromURL_fool(url):
-    response = requests.get(url,headers={'user-agent': 'my-app/0.0.1'})
-
-    soup = BeautifulSoup(response.text, 'lxml')
-
-    contents = soup.find('span', {"class": "article-content"})
-
-    paragraphs = contents.findAll('p')
-
-    return storeParagraphsAsList(paragraphs, StopWords['thestreet'])
-
-
-
-def getTextFromURL_thestreet(url):
-    response = requests.get(url,headers={'user-agent': 'my-app/0.0.1'})
-
-    soup = BeautifulSoup(response.text, 'lxml')
-
-
-    paragraphs = soup.findAll('p')
-
-    return storeParagraphsAsList(paragraphs, StopWords['thestreet'])
-
-
-
-def getTextFromURL_investopedia(url):
-    response = requests.get(url,headers={'user-agent': 'my-app/0.0.1'})
-
-    soup = BeautifulSoup(response.text, 'lxml')
-
-    content_div = soup.find(id = 'article-body_1-0')
-
-
-    paragraphs = content_div.findAll('p')
-
-    return storeParagraphsAsList(paragraphs, StopWords['investopedia'])   
-
-
-
-def getTextFromURL_barrons(url):
-    response = requests.get(url,headers={'user-agent': 'my-app/0.0.1'})
-
-    soup = BeautifulSoup(response.text, 'lxml')
-
-    content_div = soup.find(id = 'js-article__body')
-
-
-    paragraphs = content_div.findAll('p')
-
-    return storeParagraphsAsList(paragraphs, StopWords['barrons'])    
-
-
-def getTextFromURL_yahoo(url):
+def getTextFromURL(data, knownDomains):
+    url, domain = data[4], data[5]
 
     response = requests.get(url,headers={'user-agent': 'my-app/0.0.1'})
 
     soup = BeautifulSoup(response.text, 'lxml')
 
-    content_div = soup.find('div', {"class": "caas-body-wrapper"})
+    if domain not in knownDomains:
+        paragraphs = soup.findAll('p')
+    else:
+        contentSearchBy, tag, stopWord = knownDomains[domain]
+
+        if not tag:
+            print("Locked behind paywall!")
+            return []
+
+        if not contentSearchBy:
+            pass
+        elif contentSearchBy[0] == 'id':
+            content_div = soup.find(id = contentSearchBy[1])
+        else:
+            content_div = soup.find(contentSearchBy[0], {"class": contentSearchBy[1]})
+        
+        try:
+            paragraphs = content_div.findAll(tag)
+        except:
+            paragraphs = soup.findAll('p')
+        
+        return storeParagraphsAsList(paragraphs, stopWord)
+
+conn = sqlite3.connect('newsStorage.sqlite')
+cur = conn.cursor()
+
+cur.execute('''SELECT DISTINCT Domain from NewsURL
+            ''')
 
 
-    paragraphs = content_div.findAll('p')
-
-    return storeParagraphsAsList(paragraphs, StopWords['yahoo'])
+domains = cur.fetchall()
 
 
-def getTextFromURL_investors(url):
-
-    response = requests.get(url,headers={'user-agent': 'my-app/0.0.1'})
-
-    soup = BeautifulSoup(response.text, 'lxml')
-
-    content_div = soup.find('div', {"class": "single-post-content post-content drop-cap"})
+cur.execute('''SELECT * FROM NewsURL''')
 
 
-    paragraphs = content_div.findAll('p')
+rows = cur.fetchall()
 
-    return storeParagraphsAsList(paragraphs, StopWords['investor'])
+for data in rows:
+    Texts = getTextFromURL(data, knownDomains)
+    print(Texts)
+
 
