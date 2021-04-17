@@ -86,29 +86,32 @@ knownDomains['qz.com'] = (('id', "article-content"), 'p', "abcdefghijklmn")
 knownDomains['realmoney.thestreet.com'] = (('id', "article__body article-author-rail__body"), 'div', "abcdefghijklmn")
 
 
-conn = sqlite3.connect('newsStorage.sqlite')
-cur = conn.cursor()
 
-createArticleTable(cur)
+if __name__ == "__main__":
 
-rows = fetchRows(cur)
+    conn = sqlite3.connect('newsStorage.sqlite')
+    cur = conn.cursor()
 
-for i,data in enumerate(rows):
-    title, data = data[0], data[1:]
-    Texts = getTextFromURL(data, knownDomains)
-    contents = ' '.join(Texts)
+    createArticleTable(cur)
 
-    print(contents[:20])
+    rows = fetchRows(cur)
 
-    cur.execute('''INSERT OR IGNORE INTO Articles 
-                (Title, Contents) VALUES (?,?)
-                ''', (title,contents))
-    
-    if i % 10 == 0:
-        print("Sleeping now. index at {}".format(i))
-        time.sleep(1)
-        conn.commit()
+    for i,data in enumerate(rows):
+        title, data = data[0], data[1:]
+        Texts = getTextFromURL(data, knownDomains)
+        contents = ' '.join(Texts)
 
-conn.close()
+        print(contents[:20])
+
+        cur.execute('''INSERT OR IGNORE INTO Articles 
+                    (Title, Contents) VALUES (?,?)
+                    ''', (title,contents))
+        
+        if i % 10 == 0:
+            print("Sleeping now. index at {}".format(i))
+            time.sleep(1)
+            conn.commit()
+
+    conn.close()
 
 
