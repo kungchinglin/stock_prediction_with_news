@@ -66,7 +66,7 @@ conn.commit()
 
 url_finviz = "https://finviz.com/quote.ashx?t="
 
-ticker = ['AAPL', 'TSLA', 'GOOG', 'AMZN', 'FB', 'UAL', 'JPM', 'GS', 'NFLX', 'KMX']
+ticker = ['AAPL', 'TSLA', 'GOOG', 'AMZN', 'FB', 'UAL', 'JPM', 'GS', 'NFLX', 'KMX', 'GME', 'AMC', 'TLSA']
 
 newsTables = {}
 

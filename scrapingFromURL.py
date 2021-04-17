@@ -1,24 +1,7 @@
 import sqlite3
 from bs4 import BeautifulSoup
 import requests
-
-
-
-
-knownDomains = {}
-knownDomains['www.investors.com'] = (('div', "single-post-content post-content drop-cap"), 'p', "YOU MAY ALSO LIKE")
-knownDomains['finance.yahoo.com'] = (('div', "caas-body-wrapper"), 'p', "Subscribe now")
-knownDomains['www.barrons.com'] = (('id', "js-article__body"), 'p', "Write to")
-knownDomains['www.investopedia.com'] = (('id', "article-body_1-0"), 'p', "abcdefghijklmn")
-knownDomains['www.thestreet.com'] = ([], 'p', "Learn more now.")
-knownDomains['www.fool.com'] = (('span', "article-content"), 'p', "Learn more now.")
-knownDomains['www.ft.com'] = ([], "", "")
-knownDomains['www.marketwatch.com'] = (('id', "js-article__body"), 'p', "abcdefghijklmn")
-knownDomains['in.finance.yahoo.com'] = knownDomains['finance.yahoo.com']
-knownDomains['www.millionacres.com'] = (('div', "block-paragraph"), 'p', "abcdefghijklmn")
-knownDomains['qz.com'] = (('id', "article-content"), 'p', "abcdefghijklmn")
-knownDomains['realmoney.thestreet.com'] = (('id', "article__body article-author-rail__body"), 'div', "abcdefghijklmn")
-
+import time
 
 
 def storeParagraphsAsList(paragraphs, stopWord):
@@ -32,7 +15,7 @@ def storeParagraphsAsList(paragraphs, stopWord):
     return Texts
 
 def getTextFromURL(data, knownDomains):
-    url, domain = data[4], data[5]
+    url, domain = data
 
     response = requests.get(url,headers={'user-agent': 'my-app/0.0.1'})
 
@@ -61,23 +44,71 @@ def getTextFromURL(data, knownDomains):
         
         return storeParagraphsAsList(paragraphs, stopWord)
 
+def createArticleTable(cur):
+    cur.execute('''CREATE TABLE IF NOT EXISTS Articles
+                (Title TEXT UNIQUE,
+                Contents TEXT)
+                ''')
+
+
+def fetchDomains(cur):
+    cur.execute('''SELECT DISTINCT Domain from NewsURL
+            ''')
+    domains = cur.fetchall()
+
+    return domains
+
+def fetchRows(cur):
+    cur.execute('''SELECT news.Title, news.Url, news.Domain 
+                FROM NewsURL news
+                LEFT JOIN Articles art
+                ON news.Title = art.Title
+                WHERE art.Title IS NULL
+                
+                ''')
+
+    rows = cur.fetchall()
+
+    return rows
+
+knownDomains = {}
+knownDomains['www.investors.com'] = (('div', "single-post-content post-content drop-cap"), 'p', "YOU MAY ALSO LIKE")
+knownDomains['finance.yahoo.com'] = (('div', "caas-body-wrapper"), 'p', "Subscribe now")
+knownDomains['www.barrons.com'] = (('id', "js-article__body"), 'p', "Write to")
+knownDomains['www.investopedia.com'] = (('id', "article-body_1-0"), 'p', "abcdefghijklmn")
+knownDomains['www.thestreet.com'] = ([], 'p', "Learn more now.")
+knownDomains['www.fool.com'] = (('span', "article-content"), 'p', "Learn more now.")
+knownDomains['www.ft.com'] = ([], "", "")
+knownDomains['www.marketwatch.com'] = (('id', "js-article__body"), 'p', "abcdefghijklmn")
+knownDomains['in.finance.yahoo.com'] = knownDomains['finance.yahoo.com']
+knownDomains['www.millionacres.com'] = (('div', "block-paragraph"), 'p', "abcdefghijklmn")
+knownDomains['qz.com'] = (('id', "article-content"), 'p', "abcdefghijklmn")
+knownDomains['realmoney.thestreet.com'] = (('id', "article__body article-author-rail__body"), 'div', "abcdefghijklmn")
+
+
 conn = sqlite3.connect('newsStorage.sqlite')
 cur = conn.cursor()
 
-cur.execute('''SELECT DISTINCT Domain from NewsURL
-            ''')
+createArticleTable(cur)
 
+rows = fetchRows(cur)
 
-domains = cur.fetchall()
-
-
-cur.execute('''SELECT * FROM NewsURL''')
-
-
-rows = cur.fetchall()
-
-for data in rows:
+for i,data in enumerate(rows):
+    title, data = data[0], data[1:]
     Texts = getTextFromURL(data, knownDomains)
-    print(Texts)
+    contents = ' '.join(Texts)
+
+    print(contents[:20])
+
+    cur.execute('''INSERT OR IGNORE INTO Articles 
+                (Title, Contents) VALUES (?,?)
+                ''', (title,contents))
+    
+    if i % 10 == 0:
+        print("Sleeping now. index at {}".format(i))
+        time.sleep(1)
+        conn.commit()
+
+conn.close()
 
 
