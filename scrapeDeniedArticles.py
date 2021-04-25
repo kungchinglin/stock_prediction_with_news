@@ -21,8 +21,9 @@ cur.execute(''' SELECT news.Title, news.Url, news.Domain
 rows = cur.fetchall()
 
 curRows = rows
+iterations = 0
 
-while curRows:
+while curRows and iterations < 2:
     tempRows = []
     for row in curRows:
         title, data = row[0], row[1:]
@@ -45,6 +46,7 @@ while curRows:
 
     conn.commit()    
     curRows = tempRows
+    iterations += 1
 
 
 
