@@ -1,8 +1,6 @@
 import sqlite3
-from bs4 import BeautifulSoup
-import requests
 import time
-from scrapingFromURL import knownDomains, getTextFromURL
+from scrapingFromURL import knownDomains, getTextFromURL, contentsCleanUp
 
 
 
@@ -35,6 +33,9 @@ while curRows and iterations < 2:
 
 
         contents = ' '.join(Texts)
+
+        contents = contentsCleanUp(contents)
+
 
         if keyword in contents:
             tempRows.append(row)

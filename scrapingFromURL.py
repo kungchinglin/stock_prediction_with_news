@@ -2,6 +2,7 @@ import sqlite3
 from bs4 import BeautifulSoup
 import requests
 import time
+import re
 
 
 def storeParagraphsAsList(paragraphs, stopWord):
@@ -43,6 +44,12 @@ def getTextFromURL(data, knownDomains):
             paragraphs = soup.findAll('p')
         
         return storeParagraphsAsList(paragraphs, stopWord)
+
+
+def contentsCleanUp(contents):
+    newContents = re.sub('\s{2,}', ' ', contents)
+
+    return newContents
 
 def createArticleTable(cur):
     cur.execute('''CREATE TABLE IF NOT EXISTS Articles
@@ -100,6 +107,9 @@ if __name__ == "__main__":
         title, data = data[0], data[1:]
         Texts = getTextFromURL(data, knownDomains)
         contents = ' '.join(Texts)
+
+        contents = contentsCleanUp(contents)
+
 
         print(contents[:20])
 
