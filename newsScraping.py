@@ -49,32 +49,42 @@ def storeTitleAndURL(newsTables, ticker):
         print("Finished gathering data for {}".format(tick))
 
 
-conn = sqlite3.connect('newsStorage.sqlite')
-cur = conn.cursor()
-
-cur.execute('''CREATE TABLE IF NOT EXISTS NewsURL
-    (Tick TEXT,
-    Date TEXT,
-    Time TEXT,
-    Title TEXT,
-    Url TEXT,
-    Domain TEXT,
-    PRIMARY KEY (Tick, Date, Title))''')
-
-conn.commit()
-
 
 url_finviz = "https://finviz.com/quote.ashx?t="
 
-ticker = ['AAPL', 'TSLA', 'GOOG', 'AMZN', 'FB', 'UAL', 'JPM', 'GS', 'NFLX', 'KMX', 'GME', 'AMC', 'TLSA']
+tickToStock = {'AAPL': 'Apple', 'TSLA': 'Tesla', 'GOOG': 'Google', 'AMZN': 'Amazon', 'FB': 'Facebook', 'UAL': 'United Airlines', 'JPM': 'JPMorgan',
+                'GS': 'Goldman Sachs', 'NFLX': 'Netflix', 'KMX': 'Carmax', 'GME': 'Gamestop', 'AMC': 'AMC', 'TLSA': 'Tiziana'}
 
-newsTables = {}
-
-gatherNewsOnline(newsTables, ticker)
-storeTitleAndURL(newsTables, ticker)
+ticker = list(tickToStock.keys())
 
 
-conn.close()
+if __name__ == "__main__":
+
+    conn = sqlite3.connect('newsStorage.sqlite')
+    cur = conn.cursor()
+
+    cur.execute('''CREATE TABLE IF NOT EXISTS NewsURL
+        (Tick TEXT,
+        Date TEXT,
+        Time TEXT,
+        Title TEXT,
+        Url TEXT,
+        Domain TEXT,
+        PRIMARY KEY (Tick, Date, Title))''')
+
+    conn.commit()
+
+
+
+
+
+    newsTables = {}
+
+    gatherNewsOnline(newsTables, ticker)
+    storeTitleAndURL(newsTables, ticker)
+
+
+    conn.close()
 
 
 

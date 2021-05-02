@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import requests
 import time
 import re
-
+from newsScraping import tickToStock
 
 def storeParagraphsAsList(paragraphs, stopWord):
     Texts = []
@@ -51,6 +51,23 @@ def contentsCleanUp(contents):
 
     return newContents
 
+
+def interceptExtract(contents, tick, tickToStock):
+    stockName = tickToStock[tick]
+
+    matches = re.findall('([^.]*{}[^.]*\.) |([^.]*{}[^.]*\.) '.format(stockName, tick), contents)
+
+    for j in range(len(matches)):
+        matches[j] = matches[j][0].strip(' \"\'')
+        
+    shortArt = ' '.join(matches)
+        
+    shortArt = re.sub(stockName, 'it', shortArt)
+    shortArt = re.sub(tick, 'it', shortArt)
+
+    return shortArt
+
+
 def createArticleTable(cur):
     cur.execute('''CREATE TABLE IF NOT EXISTS Articles
                 (Title TEXT UNIQUE,
@@ -66,7 +83,7 @@ def fetchDomains(cur):
     return domains
 
 def fetchRows(cur):
-    cur.execute('''SELECT news.Title, news.Url, news.Domain 
+    cur.execute('''SELECT news.Tick, news.Title, news.Url, news.Domain 
                 FROM NewsURL news
                 LEFT JOIN Articles art
                 ON news.Title = art.Title
@@ -104,18 +121,19 @@ if __name__ == "__main__":
     rows = fetchRows(cur)
 
     for i,data in enumerate(rows):
-        title, data = data[0], data[1:]
+        tick, title, data = data[0], data[1], data[2:]
         Texts = getTextFromURL(data, knownDomains)
         contents = ' '.join(Texts)
 
         contents = contentsCleanUp(contents)
 
+        shortArt = interceptExtract(contents, tick, tickToStock)
 
         print(contents[:20])
 
         cur.execute('''INSERT OR IGNORE INTO Articles 
-                    (Title, Contents) VALUES (?,?)
-                    ''', (title,contents))
+                    (Title, Contents, Shortened) VALUES (?,?,?)
+                    ''', (title,contents,shortArt))
         
         if i % 10 == 0:
             print("Sleeping now. index at {}".format(i))
